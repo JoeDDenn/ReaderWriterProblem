@@ -10,87 +10,94 @@
 
 using namespace std;
 
-int generateValue(int x){
-    return (rand()%x);
-}
+//Declaring some variables/objects required
+//===========================================
 
-struct dataL{
+struct dataL{ //representing our data as a struct
     int id;
     string code;
 };
-
-bool accesesd = false;
-
+bool BufferAccessed = false; //wether the buffer is currently being accessed
+int limit = 10;
 mutex mtx;
 mutex rmtx;
+unique_lock<mutex> rLock(rmtx);
+unique_lock<mutex> mLock(mtx);
+condition_variable cv1;
+condition_variable cv2;
+vector<dataL> Buffer;
 
-std::unique_lock<std::mutex> rLock(rmtx);
-std::unique_lock<std::mutex> mLock(mtx);
-
-std::condition_variable cv1;
-std::condition_variable cv2;
+//===========================================
 
 
-std::vector<dataL> Buffer;
-int limit = 10;
-
-void write(){
-    accesesd = true;
-    dataL n;
-    n.id = generateValue(99);
-    n.code = to_string(generateValue(9999));
-    Buffer.push_back(n);
-    accesesd = false;
-}
+//Function decleration and implementation
+//===========================================
 
 bool emptySpace(){
     return (0<= Buffer.size() <=10);
 }
+
 bool itemsAvailable(){
     return (Buffer.size() >= 1);
 }
 
-void writer(){
-    bool es = emptySpace();
-    do{
-        cv2.wait(mLock,[]{return !accesesd;});
-        cv1.wait(rLock, []{return emptySpace();});
-        write();
-        cv1.notify_all();
-        cv2.notify_all();
-    }while(true);
+int generateRandomValue(int x){ //generate a rundem number in range 0-x
+    return (rand()%x);
 }
 
-void read(){
-    accesesd = true;
-    dataL n;
-    n = Buffer.back();
-    Buffer.pop_back();
-    cout<<"=========================="<<endl;
+void write(){ //implementing the functionality of generating a value and writing it to buffer
+    dataL n; //create a new container for data
+    n.id = generateRandomValue(99); //generate a radnom number for the id and code 
+    n.code = to_string(generateRandomValue(9999));
+    BufferAccessed = true; //change status to signify that the buffer is in use
+    Buffer.push_back(n); //insert new data into buffer
+    BufferAccessed = false; //change status again to release buffer
+}
+
+void read(){ //implementing the functionality of reading and outputting a value and removing it from buffer 
+    dataL n; //create a new container to load the data into
+    BufferAccessed = true; //change status to signify that the buffer is in use
+    n = Buffer.back(); //place the last item in buffer into container
+    Buffer.pop_back(); //remove last piece of data from buffer 
+    BufferAccessed = false; //change status again to release buffer
+    cout<<"=========================="<<endl; //output the data
     cout<<"id = "<<n.id<<endl;
     cout<<"code = "<<n.code<<endl;
     cout<<"=========================="<<endl;
-    accesesd = false;
 }
 
-void reader(){
+void writer(){ //writer process
+    do{
+        cv2.wait(mLock,[]{return !BufferAccessed;}); //lock mutex if buffer is accessed
+        cv1.wait(rLock, []{return emptySpace();}); 
+        write(); //begin writing to buffer
+        cv1.notify_all();
+        cv2.notify_all(); //release mutex since buffer is no longer accesesd
+    }while(true);
+}
 
+
+void reader(){ //reader process
     while(true){
-        cv2.wait(mLock,[]{return !accesesd;});
-        if(Buffer.size() >= limit){
-            cv1.wait(rLock, []{return itemsAvailable();});   
-            read();
-            cv1.notify_all();
-        }
-        cv2.notify_all();
+        cv2.wait(mLock,[]{return !BufferAccessed;}); //lock mutex if buffer is accessed
+        //if(Buffer.size() >= limit){
+        cv1.wait(rLock, []{return itemsAvailable();});
+        read(); //begin reading from buffer
+        cv1.notify_all();
+        //}
+        cv2.notify_all(); //release mutex since buffer is no longer accesesd
     }
 }
 
-int main(){
-    srand(time(0));
-    thread th1(writer);
-    thread th2(reader);
-    th1.join();
+//===========================================
+
+
+//entrypoint -->
+int main(){ 
+    srand(time(0)); //seeding the random function with time to generate a psuedorandom number
+    thread th1(writer); //create a thread with writer process
+    thread th2(reader); //create a thread with writer process
+    th1.join(); //join threads with main to prevent premature termination
     th2.join();
     return 0;
 }
