@@ -1,12 +1,12 @@
 #include <iostream>
 #include <thread>
 #include <mutex> 
+#include <condition_variable>
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <vector>
-#include<condition_variable>
 
 using namespace std;
 
@@ -17,15 +17,15 @@ struct dataL{ //representing our data as a struct
     int id;
     string code;
 };
+vector<dataL> Buffer;
 bool BufferAccessed = false; //wether the buffer is currently being accessed
-int limit = 10;
+int limit = 10; //max number of items in buffer
 mutex mtx;
 mutex rmtx;
-unique_lock<mutex> rLock(rmtx);
 unique_lock<mutex> mLock(mtx);
+unique_lock<mutex> rLock(rmtx);
 condition_variable cv1;
 condition_variable cv2;
-vector<dataL> Buffer;
 
 //===========================================
 
