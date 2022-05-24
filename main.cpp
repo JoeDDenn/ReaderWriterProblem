@@ -51,6 +51,7 @@ void write(){ //implementing the functionality of generating a value and writing
     n.code = to_string(generateRandomValue(9999));
     BufferAccessed = true; //change status to signify that the buffer is in use
     Buffer.push_back(n); //insert new data into buffer
+    sleep(1000);
     BufferAccessed = false; //change status again to release buffer
 }
 
@@ -59,6 +60,7 @@ void read(){ //implementing the functionality of reading and outputting a value 
     BufferAccessed = true; //change status to signify that the buffer is in use
     n = Buffer.back(); //place the last item in buffer into container
     Buffer.pop_back(); //remove last piece of data from buffer 
+    sleep(1000);
     BufferAccessed = false; //change status again to release buffer
     cout<<"=========================="<<endl; //output the data
     cout<<"id = "<<n.id<<endl;
